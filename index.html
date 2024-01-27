@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upgrade VRCraft Save</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Upgrade VRCraft Save</h1>
+        
+        <div class="form-group">
+            <label for="inputField">Old Save File</label>
+            <textarea id="inputField" class="form-control"></textarea>
+        </div>
+        
+        <button onclick="handleBase64()" class="btn btn-primary">Convert</button>
+        
+        <br/><br/>
+
+        <div class="form-group">
+            <label for="outputField">New Save File</label>
+            <textarea id="outputField" class="form-control" readonly></textarea>
+        </div>
+        
+        <button onclick="copyResult()" class="btn btn-secondary">Copy</button>
+    </div>
+
+    <script>
+        var blockData = {
+            "0":"air",
+            "1":"bedrock",
+            "2":"grass_block",
+            "3":"stone",
+            "4":"cobblestone",
+            "5":"dirt",
+            "6":"oak_planks",
+            "7":"oak_log",
+            "8":"oak_leaves",
+            "9":"bricks",
+            "10":"tnt",
+            "11":"sand",
+            "12":"gravel",
+            "13":"iron_block",
+            "14":"gold_block",
+            "15":"diamond_block",
+            "16":"emerald_block",
+            "17":"redstone_block",
+            "18":"gold_ore",
+            "19":"iron_ore",
+            "20":"coal_ore",
+            "21":"bookshelf",
+            "22":"mossy_cobblestone",
+            "23":"obsidian",
+            "24":"sponge",
+            "25":"glass",
+            "26":"diamond_ore",
+            "27":"redstone_ore",
+            "28":"oak_leaves",
+            "29":"stone_bricks",
+            "30":"white_wool",
+            "31":"spawner",
+            "32":"snow",
+            "33":"ice",
+            "34":"grass_block_snow",
+            "35":"air"
+        };
+
+        function handleBase64() {
+            try {
+                var input = document.getElementById("inputField").value;
+                var split = input.split("|");
+
+                var base64 = split[0];
+                var blockNamesString = split[1];
+
+                // Convert base64 string to bytes
+                var binaryString = atob(base64);
+                var bytesLength = binaryString.length;
+                var ushortArray = new Uint16Array(bytesLength / 2);
+                for (var i = 0; i < bytesLength; i += 2) {
+                    ushortArray[i / 2] = binaryString.charCodeAt(i) << 8 | binaryString.charCodeAt(i + 1);
+                }
+
+                if (ushortArray[0] != 1 || ushortArray[1] != 0) {
+                    output("Save version is not 1");
+                    return;
+                }
+
+                // write new version
+                ushortArray[0] = 2;
+                // remap block type bytes. For every other byte, remap the value to the index of the block name in the blockOrder array
+                /*for (var i = 2; i < ushortArray.length; i+=2) {
+                    var blockType = ushortArray[i];
+                    // if blocktype is not in blockData, then it is an unknown block type. set it to 0 (air)
+                    if (!(blockType in blockData)) {
+                        blockType = 0;
+                    }
+                    var blockName = blockData[blockType];
+                    var blockIndex = blockOrder.indexOf(blockName);
+                    if (blockIndex == -1) {
+                        output("Unknown block type: " + blockType);
+                        return;
+                    }
+                    console.log(ushortArray[i+1] + " of " + blockName + " (" + blockIndex + ")");
+
+                    ushortArray[i] = blockIndex;
+                }*/
+
+                // Convert bytes to base64 string
+                var binaryString = '';
+                for (var i = 0; i < ushortArray.length; i++) {
+                    binaryString += String.fromCharCode(ushortArray[i] >> 8, ushortArray[i] & 0xFF);
+                }
+
+                // Convert string to base64
+                var base64 = btoa(binaryString);
+                var blockNamesString = Object.values(blockData).join(",");
+
+                output(base64 + "|" + blockNamesString + "|128x24x128");
+            } catch (e) {
+                output(e);
+                throw(e);
+                return;
+            }
+        }
+        
+        function copyResult() {
+            var output = document.getElementById("outputField");
+            output.select();
+            document.execCommand("copy");
+        }
+
+        function output(text) {
+            document.getElementById("outputField").value = text;
+        }
+    </script>
+</body>
+</html>
+                
